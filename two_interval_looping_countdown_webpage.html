@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interval Trainer – Two-Phase Countdown</title>
+  <style>
+    :root {
+      --bg-a: #c0ffc2; /* more darker green */
+      --bg-b: #ffc2c2; /* more darker red */
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #2563eb;
+      --accent-ghost: #e2e8f0;
+      --card: #ffffff;
+      --shadow: 0 10px 20px rgba(2, 6, 23, 0.08), 0 6px 6px rgba(2, 6, 23, 0.06);
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+      color: var(--text);
+      transition: background-color 300ms ease;
+    }
+
+    body.phase-a { background-color: var(--bg-a); }
+    body.phase-b { background-color: var(--bg-b); }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 16px 20px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input[type="number"] {
+      appearance: textfield;
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 14px;
+      background: #f8fafc;
+      color: var(--text);
+    }
+
+    .timer {
+      text-align: center;
+      margin: 10px 0;
+    }
+    .time {
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(72px, 18vw, 160px);
+      font-weight: 700;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .phase {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-ghost {
+      background: var(--accent-ghost);
+      color: var(--text);
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .meta > div {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px;
+      display: grid;
+      gap: 2px;
+      justify-items: center;
+    }
+    .meta .value { font-weight: 600; color: var(--text); }
+
+    .footer {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body class="phase-a">
+  <main class="wrap">
+    <section class="card" role="region" aria-label="Interval Trainer">
+      <header style="display:flex; justify-content:space-between; align-items:center; gap: 8px; flex-wrap: wrap;">
+        <h1 style="margin:0; font-size:16px;">Interval Trainer</h1>
+        <div style="font-size:11px; color:var(--muted);">Two-phase looping countdown</div>
+      </header>
+
+      <div class="row">
+        <div class="field">
+          <label for="phaseA">Phase A (minutes)</label>
+          <input id="phaseA" type="number" min="0.1" step="0.1" value="1" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label for="phaseB">Phase B (minutes)</label>
+          <input id="phaseB" type="number" min="0.1" step="0.1" value="1" inputmode="decimal" />
+        </div>
+      </div>
+
+      <div class="timer" aria-live="polite">
+        <div class="time" id="time">00:00</div>
+        <div class="phase" id="phaseLabel">Ready</div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" class="btn-primary">Start</button>
+        <button id="stopBtn" class="btn-ghost">Stop</button>
+        <button id="resetBtn" class="btn-ghost" title="Reset to inputs">Reset</button>
+      </div>
+
+      <div class="meta" aria-hidden="true">
+        <div><div>Current Phase</div><div class="value" id="metaPhase">A</div></div>
+        <div><div>Cycle Count</div><div class="value" id="metaCycles">0</div></div>
+        <div><div>Status</div><div class="value" id="metaStatus">Idle</div></div>
+      </div>
+
+      <div class="footer">Starts with Phase A, then B, and loops indefinitely until you press Stop.</div>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      const phaseAInput = document.getElementById('phaseA');
+      const phaseBInput = document.getElementById('phaseB');
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const timeEl = document.getElementById('time');
+      const phaseLabel = document.getElementById('phaseLabel');
+      const metaPhase = document.getElementById('metaPhase');
+      const metaCycles = document.getElementById('metaCycles');
+      const metaStatus = document.getElementById('metaStatus');
+
+      let timer = null;
+      let running = false;
+      let phase = 0;
+      let cycles = 0;
+      let endAt = 0;
+      let durA = 60 * 1000;
+      let durB = 60 * 1000;
+
+      function minutesToMs(val){
+        const n = Number(val);
+        return (isFinite(n) && n > 0 ? n : 0) * 60 * 1000;
+      }
+
+      function format(ms){
+        ms = Math.max(0, ms);
+        const totalSec = Math.ceil(ms / 1000);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      }
+
+      function updateBackground(){
+        document.body.classList.toggle('phase-a', phase === 0);
+        document.body.classList.toggle('phase-b', phase === 1);
+      }
+
+      function labelForPhase(p){
+        return p === 0 ? 'Phase A' : 'Phase B';
+      }
+
+      function setStatus(text){
+        metaStatus.textContent = text;
+      }
+
+      function startCountdown(){
+        durA = minutesToMs(phaseAInput.value);
+        durB = minutesToMs(phaseBInput.value);
+        if (durA <= 0 || durB <= 0){
+          alert('Please enter positive minute values for both phases.');
+          return;
+        }
+
+        phase = 0;
+        cycles = 0;
+        metaCycles.textContent = cycles;
+        metaPhase.textContent = 'A';
+        phaseLabel.textContent = labelForPhase(phase);
+        updateBackground();
+
+        running = true;
+        setStatus('Running');
+        schedulePhase();
+        loop();
+      }
+
+      function schedulePhase(){
+        const dur = phase === 0 ? durA : durB;
+        endAt = performance.now() + dur;
+        phaseLabel.textContent = labelForPhase(phase);
+        metaPhase.textContent = phase === 0 ? 'A' : 'B';
+        updateBackground();
+      }
+
+      function nextPhase(){
+        if (phase === 0){
+          phase = 1;
+        } else {
+          phase = 0;
+          cycles += 1;
+          metaCycles.textContent = cycles;
+        }
+        schedulePhase();
+      }
+
+      function loop(){
+        if (!running) return;
+        const now = performance.now();
+        const remaining = Math.max(0, endAt - now);
+        timeEl.textContent = format(remaining);
+
+        if (remaining <= 0){
+          nextPhase();
+        }
+        timer = requestAnimationFrame(loop);
+      }
+
+      function stopCountdown(){
+        if (!running) return;
+        running = false;
+        if (timer) cancelAnimationFrame(timer);
+        setStatus('Stopped');
+        phaseLabel.textContent = 'Stopped';
+      }
+
+      function resetCountdown(){
+        if (timer) cancelAnimationFrame(timer);
+        running = false;
+        const a = minutesToMs(phaseAInput.value);
+        timeEl.textContent = format(a || 0);
+        phase = 0;
+        cycles = 0;
+        metaCycles.textContent = cycles;
+        metaPhase.textContent = 'A';
+        phaseLabel.textContent = 'Ready';
+        updateBackground();
+        setStatus('Idle');
+      }
+
+      startBtn.addEventListener('click', startCountdown);
+      stopBtn.addEventListener('click', stopCountdown);
+      resetBtn.addEventListener('click', resetCountdown);
+
+      [phaseAInput, phaseBInput].forEach(inp => {
+        inp.addEventListener('change', () => {
+          if (!running) {
+            const preview = minutesToMs(phaseAInput.value);
+            timeEl.textContent = format(preview || 0);
+          }
+        });
+      });
+
+      resetCountdown();
+    })();
+  </script>
+</body>
+</html>
