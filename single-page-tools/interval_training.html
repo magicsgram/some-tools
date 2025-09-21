@@ -6,8 +6,8 @@
   <title>Interval Trainer – Two-Phase Countdown</title>
   <style>
     :root {
-      --bg-a: #c0ffc2; /* more darker green */
-      --bg-b: #ffc2c2; /* more darker red */
+      --bg-a: #90ff94; /* even darker green */
+      --bg-b: #ff9090; /* even darker red */
       --text: #0f172a;
       --muted: #475569;
       --accent: #2563eb;
@@ -45,6 +45,25 @@
       border-radius: 16px;
       box-shadow: var(--shadow);
       padding: 16px 20px;
+      transition: transform 0.1s;
+    }
+
+    .shake {
+      animation: shake 0.12s infinite;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(3px, 3px) rotate(0deg); }
+      10% { transform: translate(-3px, -4px) rotate(-2deg); }
+      20% { transform: translate(-5px, 0px) rotate(2deg); }
+      30% { transform: translate(5px, 4px) rotate(0deg); }
+      40% { transform: translate(3px, -3px) rotate(2deg); }
+      50% { transform: translate(-3px, 4px) rotate(-2deg); }
+      60% { transform: translate(-5px, 2px) rotate(0deg); }
+      70% { transform: translate(5px, 2px) rotate(-2deg); }
+      80% { transform: translate(-3px, -3px) rotate(2deg); }
+      90% { transform: translate(3px, 4px) rotate(0deg); }
+      100% { transform: translate(3px, -4px) rotate(-2deg); }
     }
 
     .row {
@@ -147,7 +166,7 @@
 </head>
 <body class="phase-a">
   <main class="wrap">
-    <section class="card" role="region" aria-label="Interval Trainer">
+    <section class="card" id="card" role="region" aria-label="Interval Trainer">
       <header style="display:flex; justify-content:space-between; align-items:center; gap: 8px; flex-wrap: wrap;">
         <h1 style="margin:0; font-size:16px;">Interval Trainer</h1>
         <div style="font-size:11px; color:var(--muted);">Two-phase looping countdown</div>
@@ -197,6 +216,7 @@
       const metaPhase = document.getElementById('metaPhase');
       const metaCycles = document.getElementById('metaCycles');
       const metaStatus = document.getElementById('metaStatus');
+      const card = document.getElementById('card');
 
       let timer = null;
       let running = false;
@@ -205,6 +225,7 @@
       let endAt = 0;
       let durA = 60 * 1000;
       let durB = 60 * 1000;
+      let firstStart = true;
 
       function minutesToMs(val){
         const n = Number(val);
@@ -249,6 +270,7 @@
 
         running = true;
         setStatus('Running');
+        firstStart = true;
         schedulePhase();
         loop();
       }
@@ -259,6 +281,15 @@
         phaseLabel.textContent = labelForPhase(phase);
         metaPhase.textContent = phase === 0 ? 'A' : 'B';
         updateBackground();
+        if (!firstStart) {
+          triggerShake();
+        }
+        firstStart = false;
+      }
+
+      function triggerShake(){
+        card.classList.add('shake');
+        setTimeout(() => card.classList.remove('shake'), 1000);
       }
 
       function nextPhase(){
